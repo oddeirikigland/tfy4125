@@ -3,10 +3,10 @@ import matplotlib.pyplot as plt
 
 g = 9.81
 
-# iptrack - interpolate track
+# ip_track - interpolate track
 #
 # SYNTAX
-# p=iptrack(filename)
+# p=ip_track(filename)
 #
 # INPUT
 # filename: data file containing exported tracking data on the standard
@@ -19,33 +19,33 @@ g = 9.81
 # ...
 #
 # OUTPUT
-# p=iptrack(filename) returns the coefficients of a polynomial of degree 15
+# p=ip_track(filename) returns the coefficients of a polynomial of degree 15
 # that is the least square fit to the data y(x). Coefficients are given in
 # descending powers.
-def iptrack(filename):
+def ip_track(filename):
     data = np.loadtxt(filename, skiprows=2)
     return np.polyfit(data[:, 1], data[:, 2], 15)
 
 
-# trvalues - track values
+# tr_values - track values
 #
 # SYNTAX
-# [y,dydx,d2ydx2,alpha,R]=trvalues(p,x)
+# [y,dydx,d2ydx2,alpha,R]=tr_values(p,x)
 #
 # INPUT
 # p: the n+1 coefficients of a polynomial of degree n, given in descending
-# order. (For instance the output from p=iptrack(filename).)
+# order. (For instance the output from p=ipt_rack(filename).)
 # x: ordinate value at which the polynomial is evaluated.
 #
 # OUTPUT
-# [y,dydx,d2ydx2,alpha,R]=trvalues(p,x) returns the value y of the
+# [y,dydx,d2ydx2,alpha,R]=tr_values(p,x) returns the value y of the
 # polynomial at x, the derivative dydx and the second derivative d2ydx2 in
 # that point, as well as the slope alpha(x) and the radius of the
 # osculating circle.
 # The slope angle alpha is positive for a curve with a negative derivative.
 # The sign of the radius of the osculating circle is the same as that of
 # the second derivative.
-def trvalues(p, x):
+def tr_values(p, x):
     y = np.polyval(p, x)
     dp = np.polyder(p)
     dydx = np.polyval(dp, x)
@@ -56,7 +56,7 @@ def trvalues(p, x):
     return y, dydx, d2ydx2, alpha, R
 
 
-def plotRawData(filename):
+def plot_raw_data(filename):
     data = np.loadtxt(filename, skiprows=2)
 
     # plots s(t)
@@ -79,55 +79,49 @@ def plotRawData(filename):
     )
 
 
-def slope_akseleration(angle_of_inclination):
-    return 5 * g * np.sin(angle_of_inclination) / 7
+def slope_acceleration(angle_of_inclination):
+    aks = 5 * g * np.sin(angle_of_inclination) / 7
+    aks_x = aks*np.cos(angle_of_inclination)
+    aks_y = aks*np.sin(angle_of_inclination)
+    return np.sqrt(aks_x**2 + aks_y**2)
 
 
 # regn ut numerisk: s(t), v(t), normalkraft, friksjonskraft
-def calculate(filename):
-    poly = iptrack(filename)
+def calculate_numeric_values(filename):
+    poly = ip_track(filename)
 
     t = np.array([])
     x = np.array([])
     y = np.array([])
     v = np.array([])
 
-    N = 100000  # number of steps
-    h = 0.001  # step size
-    i = 0
+    # step size
+    h = 0.001
 
     # initial values
     t_old = 0
     x_old = 0.7393787749776366
     v_old = 0
 
-    # t = np.zeros(N+1)
-    # x = np.zeros(N+1)
-    # y = np.zeros(N+1)
-    # v = np.zeros(N+1)
-    # t[0] = t_0
-    # v[0] = v_0
 
     while x_old > -0.3305748273167307:
-        y_old, dydx, d2ydx2, alpha, R = trvalues(poly, x_old)
-
-        print(alpha)
+        y_old, dydx, d2ydx2, alpha, R = tr_values(poly, x_old)
 
         t = np.append(t, t_old)
         x = np.append(x, x_old)
         y = np.append(y, y_old)
         v = np.append(v, v_old)
 
-        x_new = x_old + h * v_old
+        x_new = x_old - h * v_old * np.cos(alpha)
 
         if x_old > 0:
             # ball in slope
-            v_new = v_old + h * slope_akseleration(angle_of_inclination=alpha)
+            v_new = v_old + h * slope_acceleration(angle_of_inclination=alpha)
         else:
             # ball have jumped
-            v_new = v_old - h * g
+            v_new = v_old + h * g
 
-        t_old = t_old + h
+        t_old += h
         x_old = x_new
         v_old = v_new
 
@@ -142,13 +136,12 @@ def calculate(filename):
     plt.xlabel("Tid t [s]")
     plt.ylabel("Fart v [m/s]")
     plt.plot(t, v)
-    print(v)
 
 
 def main():
     filename = "resultater_video8.txt"
-    plotRawData(filename)
-    calculate(filename)
+    plot_raw_data(filename)
+    calculate_numeric_values(filename)
     plt.show()
 
 
