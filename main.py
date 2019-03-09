@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 g = 9.81
+m = 0.1
 
 # ip_track - interpolate track
 #
@@ -65,9 +66,9 @@ def plot_raw_data(filename):
     plt.ylabel("Posisjon y [m]")
     plt.plot(data[:, 1], data[:, 2])
 
-    # plots v(t)
     deltas = np.diff(data, axis=0)
 
+    # plots v(t)
     plt.figure()
     plt.xlabel("Tid t [s]")
     plt.ylabel("Fart v [m/s]")
@@ -81,12 +82,11 @@ def plot_raw_data(filename):
 
 def slope_acceleration(angle_of_inclination):
     aks = 5 * g * np.sin(angle_of_inclination) / 7
-    aks_x = aks*np.cos(angle_of_inclination)
-    aks_y = aks*np.sin(angle_of_inclination)
-    return np.sqrt(aks_x**2 + aks_y**2)
+    aks_x = aks * np.cos(angle_of_inclination)
+    aks_y = aks * np.sin(angle_of_inclination)
+    return np.sqrt(aks_x ** 2 + aks_y ** 2)
 
 
-# regn ut numerisk: s(t), v(t), normalkraft, friksjonskraft
 def calculate_numeric_values(filename):
     poly = ip_track(filename)
 
@@ -94,6 +94,8 @@ def calculate_numeric_values(filename):
     x = np.array([])
     y = np.array([])
     v = np.array([])
+    normal_force = np.array([])
+    friction_force = np.array([])
 
     # step size
     h = 0.001
@@ -102,7 +104,6 @@ def calculate_numeric_values(filename):
     t_old = 0
     x_old = 0.7393787749776366
     v_old = 0
-
 
     while x_old > -0.3305748273167307:
         y_old, dydx, d2ydx2, alpha, R = tr_values(poly, x_old)
@@ -116,15 +117,25 @@ def calculate_numeric_values(filename):
 
         if x_old > 0:
             # ball in slope
-            v_new = v_old + h * slope_acceleration(angle_of_inclination=alpha)
+            acceleration = slope_acceleration(angle_of_inclination=alpha)
+            v_new = v_old + h * acceleration
+            normal_force_value = m * (v_old ** 2 / R + g * np.cos(alpha))
+            friction_force_value = m * (g * np.sin(alpha) - acceleration)
         else:
             # ball have jumped
             v_new = v_old + h * g
+            normal_force_value = 0
+            friction_force_value = 0
 
         t_old += h
         x_old = x_new
         v_old = v_new
+        normal_force = np.append(normal_force, normal_force_value)
+        friction_force = np.append(friction_force, friction_force_value)
+    return t, x, y, v, normal_force, friction_force
 
+
+def plot_numeric_result(t, x, y, v, normal_force, friction_force):
     # plots s(t)
     plt.figure()
     plt.xlabel("Posisjon x [m]")
@@ -137,11 +148,23 @@ def calculate_numeric_values(filename):
     plt.ylabel("Fart v [m/s]")
     plt.plot(t, v)
 
+    # plots normal force
+    plt.figure()
+    plt.xlabel("Tid t [s]")
+    plt.ylabel("Normalkraft N [N]")
+    plt.plot(t, normal_force)
+
+    # plots friction force
+    plt.figure()
+    plt.xlabel("Tid t [s]")
+    plt.ylabel("Friction f [N]")
+    plt.plot(t, friction_force)
+
 
 def main():
     filename = "resultater_video8.txt"
     plot_raw_data(filename)
-    calculate_numeric_values(filename)
+    plot_numeric_result(*calculate_numeric_values(filename))
     plt.show()
 
 
