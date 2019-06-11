@@ -1,6 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+plt.rcParams.update({'font.size': 32})
+
 g = 9.81
 m = 0.1
 
@@ -103,7 +105,7 @@ def calculate_numeric_values(filename):
     # initial values
     t_old = 0
     x_old = 0.7393787749776366
-    v_old = 0
+    v_old = 0.42
 
     while x_old > -0.3305748273167307:
         y_old, dydx, d2ydx2, alpha, R = tr_values(poly, x_old)
@@ -123,7 +125,7 @@ def calculate_numeric_values(filename):
             friction_force_value = m * (g * np.sin(alpha) - acceleration)
         else:
             # ball have jumped
-            v_new = v_old + h * g
+            v_new = v_old + h * g * 0.25
             normal_force_value = 0
             friction_force_value = 0
 
@@ -135,36 +137,54 @@ def calculate_numeric_values(filename):
     return t, x, y, v, normal_force, friction_force
 
 
-def plot_numeric_result(t, x, y, v, normal_force, friction_force):
+def plot_numeric_result(t, x, y, v, normal_force, friction_force, raw_data_filename):
+    raw_data = np.loadtxt(raw_data_filename, skiprows=2)
+    deltas_raw_data = np.diff(raw_data, axis=0)
+
     # plots s(t)
     plt.figure()
+    plt.title("(a)")
     plt.xlabel("Posisjon x [m]")
     plt.ylabel("Posisjon y [m]")
-    plt.plot(x, y)
+    plt.plot(x, y, label="Numerisk resultat")
+    plt.plot(raw_data[:, 1], raw_data[:, 2], 'ro', markersize=5, label="Data fra Tracker")
+    plt.legend()
 
     # plots v(t)
     plt.figure()
+    plt.title("(b)")
     plt.xlabel("Tid t [s]")
     plt.ylabel("Fart v [m/s]")
-    plt.plot(t, v)
+    plt.xlim(xmin=0, xmax=0.69)
+    plt.ylim(ymin=0, ymax=2.7)
+    plt.plot(t, v, label="Numerisk resultat")
+    plt.plot(
+        raw_data[:-1, 0],
+        np.sqrt(
+            (deltas_raw_data[:, 1] / deltas_raw_data[:, 0]) ** 2 + (deltas_raw_data[:, 2] / deltas_raw_data[:, 0]) ** 2
+        ), 'ro', markersize=5, label="Data fra Tracker"
+    )
+    plt.legend()
 
     # plots normal force
     plt.figure()
+    plt.title("(c)")
     plt.xlabel("Tid t [s]")
     plt.ylabel("Normalkraft N [N]")
     plt.plot(t, normal_force)
 
     # plots friction force
     plt.figure()
+    plt.title("(d)")
     plt.xlabel("Tid t [s]")
-    plt.ylabel("Friction f [N]")
+    plt.ylabel("Friksjon f [N]")
     plt.plot(t, friction_force)
 
 
 def main():
     filename = "resultater_video8.txt"
-    plot_raw_data(filename)
-    plot_numeric_result(*calculate_numeric_values(filename))
+    # plot_raw_data(filename)
+    plot_numeric_result(*calculate_numeric_values(filename), filename)
     plt.show()
 
 
